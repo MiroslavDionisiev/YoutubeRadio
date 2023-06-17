@@ -1,80 +1,138 @@
 defmodule YoutubeRadio.Room do
   use GenServer, restart: :transient
 
-  alias YoutubeRadio.Models.VideoData, as: VideoData
+  alias YoutubeRadio.YoutubeRooms
+  alias Phoenix.PubSub
 
-  def start_link([room_name | _rest] = params) do
+  def start_link([room_name] = params) do
     GenServer.start_link(__MODULE__, params,
       name: {:via, Registry, {YoutubeRadio.Room.Registry, room_name}}
     )
   end
 
   @impl true
-  def init(_params) do
-    {:ok, %{"songs_to_play" => :queue.new()}}
+  def init([room_name]) do
+    room = YoutubeRooms.get_room_by_room_name(room_name)
+    next_to_play_video = YoutubeRooms.get_next_to_play_video(room.id)
+
+    PubSub.broadcast(YoutubeRadio.PubSub, room_name, %{
+      event: "start_playing",
+      payload: next_to_play_video
+    })
+
+    ref = schedule_work(next_to_play_video)
+
+    {:ok,
+     %{
+       "users_count" => 1,
+       "worker_ref" => ref,
+       "current_video" => next_to_play_video,
+       "room" => room,
+       "start_time" => System.os_time(:second)
+     }}
   end
 
   @impl true
-  def handle_call({:submit_song, youtube_url}, _from, state) do
-    song_id = get_song_id(youtube_url)
+  def handle_info({:play_new_video, current_video_id}, state) do
+    if current_video_id != nil do
+      YoutubeRooms.set_video_to_played(current_video_id)
+    end
 
-    case song_id do
-      {:error, _} -> {:reply, song_id, state}
-      {:ok, song_id} -> add_song(state, song_id)
+    next_to_play_video = YoutubeRooms.get_next_to_play_video(state.room.id)
+
+    PubSub.broadcast(YoutubeRadio.PubSub, state["room"].name, %{
+      event: "start_playing",
+      payload: next_to_play_video
+    })
+
+    ref = schedule_work(next_to_play_video)
+
+    {:noreply,
+     %{
+       "users_count" => state["users_count"],
+       "worker_ref" => ref,
+       "current_video" => next_to_play_video,
+       "room" => state["room"],
+       "start_time" => System.os_time(:second)
+     }}
+  end
+
+  @impl true
+  def handle_cast({:add_user, pubsub_node_name}, state) do
+    PubSub.direct_broadcast(pubsub_node_name, YoutubeRadio.PubSub, state["room"].name, %{
+      event: "start_playing_from_timestamp",
+      payload: %{
+        video: state["current_video"],
+        current_timestamp: System.os_time(:second) - state["start_time"]
+      }
+    })
+
+    {:noreply,
+     %{
+       "users_count" => state["users_count"] + 1,
+       "worker_ref" => state["worker_ref"],
+       "current_video" => state["current_video"],
+       "room" => state["room"],
+       "start_time" => state["start_time"]
+     }}
+  end
+
+  @impl true
+  def handle_cast({:remove_user}, state) do
+    new_user_count = state["users_count"] - 1
+
+    case new_user_count do
+      0 ->
+        Process.cancel_timer(state["worker_ref"])
+        Kernel.exit(:shutdown)
+
+      _ ->
+        {:noreply,
+         %{
+           "users_count" => state["users_count"] + 1,
+           "worker_ref" => state["worker_ref"],
+           "current_video" => state["current_video"],
+           "room" => state["room"],
+           "start_time" => state["start_time"]
+         }}
     end
   end
 
   @impl true
-  def handle_call({:get_songs}, _from, state) do
-    {:reply, :queue.to_list(state["songs_to_play"]), state}
+  def terminate(reason, state) do
+    Registry.unregister(YoutubeRadio.Room.Registry, state["room"].name)
+    IO.puts("Process terminated with #{reason}")
   end
 
-  defp get_song_id(youtube_url) do
-    case String.match?(youtube_url, ~r/[?&]v=/) do
-      false ->
-        {:error, "Invalid url"}
+  defp time_converter_to_miliseconds(duration) do
+    time =
+      String.split(duration, ["PT", "M", "S"], trim: true)
+      |> Enum.map(fn num -> String.to_integer(num) end)
 
+    case String.match?(duration, ~r/PT\d+M\d+S/) do
       true ->
-        {:ok, String.split(youtube_url, "v=") |> Enum.at(1) |> String.split("&") |> List.first()}
+        [minutes, seconds | []] = time
+        :timer.minutes(minutes) + :timer.seconds(seconds)
+
+      false ->
+        [seconds | []] = time
+        :timer.seconds(seconds)
     end
   end
 
-  defp add_song(state, song_id) do
-    youtube_data = YoutubeRadio.Api.YoutubeApi.get_youtube_video_data(song_id)
-
-    parsed_video_data = parse_api_response(youtube_data)
-
-    case parsed_video_data do
-      {:ok, video_data} ->
-        new_state = Map.put(state, "songs_to_play", :queue.in(video_data, state["songs_to_play"]))
-        {:reply, {:ok, "Successful update"}, new_state}
-
-      {:error, _} ->
-        {:reply, parsed_video_data, state}
-    end
+  defp schedule_work(nil) do
+    Process.send_after(
+      self(),
+      {:play_new_video, nil},
+      :timer.seconds(5)
+    )
   end
 
-  defp parse_api_response({:ok, video_data}) do
-    result = Jason.decode(video_data)
-
-    case result do
-      {:ok, video_data} -> handle_video_data(video_data)
-      {:error, _} -> result
-    end
-  end
-
-  defp parse_api_response({:error, _}), do: nil
-
-  defp handle_video_data(video_data) do
-    if(video_data["items"]) do
-      {:ok,
-       %VideoData{
-         title: List.first(video_data["items"])["snippet"]["title"],
-         embed_html: List.first(video_data["items"])["player"]["embedHtml"],
-         duration_ms: List.first(video_data["items"])["contentDetails"]["duration"]
-       }}
-    else
-      {:error, video_data}
-    end
+  defp schedule_work(current_video) do
+    Process.send_after(
+      self(),
+      {:play_new_video, current_video.id},
+      time_converter_to_miliseconds(current_video.duration)
+    )
   end
 end

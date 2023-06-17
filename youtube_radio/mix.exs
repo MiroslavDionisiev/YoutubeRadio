@@ -50,7 +50,8 @@ defmodule YoutubeRadio.MixProject do
       {:gettext, "~> 0.20"},
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
-      {:req, "~> 0.3"}
+      {:req, "~> 0.3"},
+      {:pbkdf2_elixir, "~> 2.1"}
     ]
   end
 
