@@ -6,13 +6,16 @@ defmodule YoutubeRadioWeb.YoutubeRoom.YoutubeRoomLive do
 
   import YoutubeRadioWeb.CoreComponents
 
+
   @impl true
   def mount(%{"id" => room_id} = _params, _session, socket) do
     room = YoutubeRooms.get_room_by_id(String.to_integer(room_id))
 
     if connected?(socket) do
+      current_user_id = Map.get(socket.assigns, :current_user).id
+      PubSub.subscribe(YoutubeRadio.PubSub, "#{room.name}_#{current_user_id}")
+      YoutubeRadioRooms.join_room(room.name, current_user_id)
       PubSub.subscribe(YoutubeRadio.PubSub, room.name)
-      YoutubeRadioRooms.join_room(room.name, PubSub.node_name(YoutubeRadio.PubSub))
     end
 
     {:ok,
@@ -22,6 +25,11 @@ defmodule YoutubeRadioWeb.YoutubeRoom.YoutubeRoomLive do
        video: nil,
        current_timestamp: 0
      )}
+  end
+
+  @impl true
+  def terminate(_reason, socket) do
+    YoutubeRadioRooms.remove_user(socket.assigns.room.name)
   end
 
   @impl true
@@ -40,13 +48,7 @@ defmodule YoutubeRadioWeb.YoutubeRoom.YoutubeRoomLive do
   end
 
   @impl true
-  def handle_info(
-        %{
-          event: "start_playing_from_timestamp",
-          payload: %{video: video, current_timestamp: current_timestamp}
-        },
-        socket
-      ) do
+  def handle_info(%{event: "start_playing_from_timestamp", payload: %{video: video, current_timestamp: current_timestamp}}, socket) do
     {:noreply, assign(socket, video: video, current_timestamp: current_timestamp)}
   end
 end

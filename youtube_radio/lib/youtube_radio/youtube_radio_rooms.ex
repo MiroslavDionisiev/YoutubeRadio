@@ -16,17 +16,25 @@ defmodule YoutubeRadio.YoutubeRadioRooms do
     DynamicSupervisor.init(opts)
   end
 
-  def join_room(room_name, pubsub_node_name) do
+  def join_room(room_name, current_user_id) do
     child_spec = {YoutubeRadio.Room, [room_name]}
-    DynamicSupervisor.start_child(__MODULE__, child_spec)
 
     case Registry.lookup(YoutubeRadio.Room.Registry, room_name) do
       [{pid, _}] ->
-        GenServer.cast(pid, {:add_user, pubsub_node_name})
+        GenServer.cast(pid, {:add_user, current_user_id})
 
       [] ->
         child_spec = {YoutubeRadio.Room, [room_name]}
         DynamicSupervisor.start_child(__MODULE__, child_spec)
+    end
+
+    :ok
+  end
+
+  def remove_user(room_name) do
+    case Registry.lookup(YoutubeRadio.Room.Registry, room_name) do
+      [{pid, _}] ->
+        GenServer.cast(pid, {:remove_user})
     end
 
     :ok

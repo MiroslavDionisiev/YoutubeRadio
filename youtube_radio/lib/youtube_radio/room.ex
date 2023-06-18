@@ -24,11 +24,11 @@ defmodule YoutubeRadio.Room do
 
     {:ok,
      %{
-       "users_count" => 1,
-       "worker_ref" => ref,
-       "current_video" => next_to_play_video,
-       "room" => room,
-       "start_time" => System.os_time(:second)
+       users_count: 1,
+       worker_ref: ref,
+       current_video: next_to_play_video,
+       room: room,
+       start_time: System.os_time(:second)
      }}
   end
 
@@ -40,7 +40,7 @@ defmodule YoutubeRadio.Room do
 
     next_to_play_video = YoutubeRooms.get_next_to_play_video(state.room.id)
 
-    PubSub.broadcast(YoutubeRadio.PubSub, state["room"].name, %{
+    PubSub.broadcast(YoutubeRadio.PubSub, state.room.name, %{
       event: "start_playing",
       payload: next_to_play_video
     })
@@ -49,59 +49,58 @@ defmodule YoutubeRadio.Room do
 
     {:noreply,
      %{
-       "users_count" => state["users_count"],
-       "worker_ref" => ref,
-       "current_video" => next_to_play_video,
-       "room" => state["room"],
-       "start_time" => System.os_time(:second)
+       users_count: state.users_count,
+       worker_ref: ref,
+       current_video: next_to_play_video,
+       room: state.room,
+       start_time: System.os_time(:second)
      }}
   end
 
   @impl true
-  def handle_cast({:add_user, pubsub_node_name}, state) do
-    PubSub.direct_broadcast(pubsub_node_name, YoutubeRadio.PubSub, state["room"].name, %{
+  def handle_cast({:add_user, current_user_id}, state) do
+    PubSub.broadcast(YoutubeRadio.PubSub, "#{state.room.name}_#{current_user_id}", %{
       event: "start_playing_from_timestamp",
       payload: %{
-        video: state["current_video"],
-        current_timestamp: System.os_time(:second) - state["start_time"]
+        video: state.current_video,
+        current_timestamp: System.os_time(:second) - state.start_time
       }
     })
 
     {:noreply,
      %{
-       "users_count" => state["users_count"] + 1,
-       "worker_ref" => state["worker_ref"],
-       "current_video" => state["current_video"],
-       "room" => state["room"],
-       "start_time" => state["start_time"]
+       users_count: state.users_count + 1,
+       worker_ref: state.worker_ref,
+       current_video: state.current_video,
+       room: state.room,
+       start_time: state.start_time
      }}
   end
 
   @impl true
   def handle_cast({:remove_user}, state) do
-    new_user_count = state["users_count"] - 1
+    new_user_count = state.users_count - 1
 
     case new_user_count do
       0 ->
-        Process.cancel_timer(state["worker_ref"])
+        Process.cancel_timer(state.worker_ref)
         Kernel.exit(:shutdown)
 
       _ ->
         {:noreply,
          %{
-           "users_count" => state["users_count"] + 1,
-           "worker_ref" => state["worker_ref"],
-           "current_video" => state["current_video"],
-           "room" => state["room"],
-           "start_time" => state["start_time"]
+           users_count: new_user_count,
+           worker_ref: state.worker_ref,
+           current_video: state.current_video,
+           room: state.room,
+           start_time: state.start_time
          }}
     end
   end
 
   @impl true
   def terminate(reason, state) do
-    Registry.unregister(YoutubeRadio.Room.Registry, state["room"].name)
-    IO.puts("Process terminated with #{reason}")
+    Registry.unregister(YoutubeRadio.Room.Registry, state.room.name)
   end
 
   defp time_converter_to_miliseconds(duration) do
