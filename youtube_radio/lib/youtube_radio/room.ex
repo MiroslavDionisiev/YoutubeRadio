@@ -99,7 +99,7 @@ defmodule YoutubeRadio.Room do
   end
 
   @impl true
-  def terminate(reason, state) do
+  def terminate(_reason, state) do
     Registry.unregister(YoutubeRadio.Room.Registry, state.room.name)
   end
 

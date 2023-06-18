@@ -17,8 +17,6 @@ defmodule YoutubeRadio.YoutubeRadioRooms do
   end
 
   def join_room(room_name, current_user_id) do
-    child_spec = {YoutubeRadio.Room, [room_name]}
-
     case Registry.lookup(YoutubeRadio.Room.Registry, room_name) do
       [{pid, _}] ->
         GenServer.cast(pid, {:add_user, current_user_id})
