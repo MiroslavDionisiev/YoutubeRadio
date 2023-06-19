@@ -14,17 +14,17 @@ defmodule YoutubeRadioWeb.YoutubeRoom.YoutubeRoomLive do
     if connected?(socket) do
       current_user_id = Map.get(socket.assigns, :current_user).id
       PubSub.subscribe(YoutubeRadio.PubSub, "#{room.name}_#{current_user_id}")
-      YoutubeRadioRooms.join_room(room.name, current_user_id)
       PubSub.subscribe(YoutubeRadio.PubSub, room.name)
+      YoutubeRadioRooms.join_room(room.name, current_user_id)
     end
 
     {:ok,
      assign(socket,
-       form: to_form(%{}),
+       form: to_form(%{}, as: "video"),
        room: room,
        video: nil,
        current_timestamp: 0
-     )}
+     ), temporary_assigns: [form: nil]}
   end
 
   @impl true
@@ -33,13 +33,17 @@ defmodule YoutubeRadioWeb.YoutubeRoom.YoutubeRoomLive do
   end
 
   @impl true
-  def handle_event("save", %{"youtube_link" => youtube_link}, socket) do
+  def handle_event("save", %{"video" => video}, socket) do
     current_user_id = Map.get(socket.assigns, :current_user).id
     room_id = Map.get(socket.assigns, :room).id
 
-    YoutubeRooms.add_video_to_room(youtube_link, room_id, current_user_id)
+    case YoutubeRooms.add_video_to_room(video["youtube_link"], room_id, current_user_id) do
+      {:ok, _} -> {:noreply,  assign(socket, form: to_form(%{}, as: "video"))}
 
-    {:noreply, socket}
+      {:error, changeset} ->
+        IO.inspect(changeset)
+        {:noreply, assign(socket, form: to_form(changeset, as: "video"))}
+    end
   end
 
   @impl true
@@ -48,7 +52,13 @@ defmodule YoutubeRadioWeb.YoutubeRoom.YoutubeRoomLive do
   end
 
   @impl true
-  def handle_info(%{event: "start_playing_from_timestamp", payload: %{video: video, current_timestamp: current_timestamp}}, socket) do
+  def handle_info(
+        %{
+          event: "start_playing_from_timestamp",
+          payload: %{video: video, current_timestamp: current_timestamp}
+        },
+        socket
+      ) do
     {:noreply, assign(socket, video: video, current_timestamp: current_timestamp)}
   end
 end

@@ -12,6 +12,10 @@ defmodule YoutubeRadioWeb.Common.RoomTileComponent do
     <div class="view">
       <h1><%= @room.name %></h1>
 
+      <.error :if={@check_errors}>
+        The room is not empty
+      </.error>
+
       <.link href={~p"/rooms/#{@room.id}"}>
         Enter
       </.link>
@@ -27,10 +31,17 @@ defmodule YoutubeRadioWeb.Common.RoomTileComponent do
 
   @impl true
   def handle_event("delete", data, socket) do
-    current_user_id = Map.get(socket.assigns, :current_user).id
-    YoutubeRooms.delete_room(Map.get(data, "id") |> String.to_integer(), current_user_id)
-    socket = assign(socket, rooms: YoutubeRooms.get_all_rooms(), active: %Room{})
-    PubSub.broadcast(YoutubeRadio.PubSub, @topic, %{event: "update", payload: socket.assigns})
-    {:noreply, socket}
+    current_user_id = socket.assigns.current_user.id
+    case Registry.lookup(YoutubeRadio.Room.Registry, socket.assigns.room.name) do
+      [{_pid, _}] ->
+        socket = assign(socket, check_errors: true)
+        {:noreply, socket}
+
+      [] ->
+        YoutubeRooms.delete_room(Map.get(data, "id") |> String.to_integer(), current_user_id)
+        socket = assign(socket, rooms: YoutubeRooms.get_all_rooms(), active: %Room{})
+        PubSub.broadcast(YoutubeRadio.PubSub, @topic, %{event: "update", payload: socket.assigns})
+        {:noreply, socket}
+    end
   end
 end

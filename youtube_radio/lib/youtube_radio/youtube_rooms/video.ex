@@ -13,10 +13,11 @@ defmodule YoutubeRadio.YoutubeRooms.Video do
     timestamps()
   end
 
-  def changeset(room, params \\ %{}) do
-    room
+  def changeset(video, params \\ %{}) do
+    video
     |> cast(params, [:video_id, :title, :duration, :room_id, :user_id])
     |> validate_required([:video_id, :title, :duration])
+    |> validate_format(:duration, ~r/^PT(\d+[MS])+$/, message: "Video is too long")
     |> foreign_key_constraint(:room_id)
     |> foreign_key_constraint(:user_id)
   end

@@ -23,6 +23,10 @@ defmodule YoutubeRadio.YoutubeRooms do
     |> Repo.insert()
   end
 
+  def change_room(%Room{} = room, attrs \\ %{}) do
+    Room.changeset(room, attrs, validate_name: false)
+  end
+
   def delete_room(room_id, user_id) when is_integer(room_id) and is_integer(user_id) do
     Repo.delete_all(from(room in Room, where: room.id == ^room_id and room.user_id == ^user_id))
   end

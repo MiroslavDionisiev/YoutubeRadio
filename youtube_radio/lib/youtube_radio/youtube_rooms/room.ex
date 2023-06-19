@@ -10,13 +10,22 @@ defmodule YoutubeRadio.YoutubeRooms.Room do
     timestamps()
   end
 
-  def changeset(room, params \\ %{}) do
+  def changeset(room, params \\ %{}, opts \\ []) do
     room
     |> cast(params, [:name, :user_id])
     |> foreign_key_constraint(:user_id)
     |> validate_required([:name])
     |> validate_length(:name, min: 4, max: 160)
-    |> unsafe_validate_unique(:name, YoutubeRadio.Repo)
-    |> unique_constraint(:name)
+    |> maybe_validate_unique_name(opts)
+  end
+
+  defp maybe_validate_unique_name(changeset, opts) do
+    if Keyword.get(opts, :validate_name, true) do
+      changeset
+      |> unsafe_validate_unique(:name, YoutubeRadio.Repo)
+      |> unique_constraint(:name)
+    else
+      changeset
+    end
   end
 end
