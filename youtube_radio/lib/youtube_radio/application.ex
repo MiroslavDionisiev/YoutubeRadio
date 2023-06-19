@@ -17,9 +17,11 @@ defmodule YoutubeRadio.Application do
       # Start Finch
       {Finch, name: YoutubeRadio.Finch},
       # Start the Endpoint (http/https)
-      YoutubeRadioWeb.Endpoint
+      YoutubeRadioWeb.Endpoint,
       # Start a worker by calling: YoutubeRadio.Worker.start_link(arg)
       # {YoutubeRadio.Worker, arg}
+      {Registry, keys: :unique, name: YoutubeRadio.Room.Registry},
+      {DynamicSupervisor, name: YoutubeRadio.YoutubeRadioRooms, strategy: :one_for_one}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

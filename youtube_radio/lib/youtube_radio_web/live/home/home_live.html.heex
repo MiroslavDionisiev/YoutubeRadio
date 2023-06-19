@@ -1,0 +1,30 @@
+<section class="rooms-section">
+  <header class="header">
+    <h1>YouTubeRooms</h1>
+    <.form
+      for={@form}
+      phx-submit="create"
+      phx-change="validate"
+      method="post"
+    >
+      <.input
+        id="new_room"
+        type="text"
+        field={@form[:name]}
+      />
+      <button>Create</button>
+    </.form>
+  </header>
+
+  <section class="main", id="rooms_list">
+    <%= for room <- @rooms do %>
+      <.live_component
+        module={YoutubeRadioWeb.Common.RoomTileComponent}
+        id={"#{room.id}"}
+        room={room}
+        current_user={@current_user}
+        check_errors={false}
+      />
+    <% end %>
+  </section>
+</section>

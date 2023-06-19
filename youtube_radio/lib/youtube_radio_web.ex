@@ -52,7 +52,7 @@ defmodule YoutubeRadioWeb do
   def live_view do
     quote do
       use Phoenix.LiveView,
-        layout: {YoutubeRadioWeb.Layouts, :app}
+        layout: {YoutubeRadioWeb.Layouts, :live}
 
       unquote(html_helpers())
     end
