@@ -1,3 +1,7 @@
 .youtube-room {
 	margin: 0 10%;
 }
+
+.ytplayer {
+	pointer-events: none;
+}

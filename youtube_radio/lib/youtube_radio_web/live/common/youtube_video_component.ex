@@ -6,7 +6,7 @@ defmodule YoutubeRadioWeb.Common.YoutubeVideoComponent do
     <div>
       <%= if @video != nil do %>
         <iframe
-          id="ytplayer"
+          class="ytplayer"
           type="text/html"
           width="640"
           height="360"
