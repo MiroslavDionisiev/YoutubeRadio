@@ -11,7 +11,7 @@ defmodule YoutubeRadio.Api.YoutubeApi do
         params: [
           part: "snippet,player,contentDetails",
           id: video_id,
-          key: "AIzaSyAnYIizCccXsSagg2xSn7w85OMH1_SrP3Q"
+          key: Application.get_env(:youtube_radio, :youtube_api_key)
         ]
       ).body
 

@@ -12,7 +12,7 @@ defmodule YoutubeRadioWeb.YoutubeRoom.YoutubeRoomLive do
     room = YoutubeRooms.get_room_by_id(String.to_integer(room_id))
 
     if connected?(socket) do
-      current_user_id = Map.get(socket.assigns, :current_user).id
+      current_user_id = socket.assigns.current_user.id
       PubSub.subscribe(YoutubeRadio.PubSub, "#{room.name}_#{current_user_id}")
       PubSub.subscribe(YoutubeRadio.PubSub, room.name)
       YoutubeRadioRooms.join_room(room.name, current_user_id)
@@ -20,7 +20,7 @@ defmodule YoutubeRadioWeb.YoutubeRoom.YoutubeRoomLive do
 
     {:ok,
      assign(socket,
-       form: to_form(%{}, as: "video"),
+       form: to_form(%{}),
        room: room,
        video: nil,
        current_timestamp: 0
@@ -33,16 +33,16 @@ defmodule YoutubeRadioWeb.YoutubeRoom.YoutubeRoomLive do
   end
 
   @impl true
-  def handle_event("save", %{"video" => video}, socket) do
-    current_user_id = Map.get(socket.assigns, :current_user).id
-    room_id = Map.get(socket.assigns, :room).id
+  def handle_event("save", video, socket) do
+    current_user_id = socket.assigns.current_user.id
+    room_id = socket.assigns.room.id
 
     case YoutubeRooms.add_video_to_room(video["youtube_link"], room_id, current_user_id) do
-      {:ok, _} -> {:noreply,  assign(socket, form: to_form(%{}, as: "video"))}
+      {:ok, _} -> {:noreply,  assign(socket, form: to_form(%{}))}
 
       {:error, changeset} ->
         IO.inspect(changeset)
-        {:noreply, assign(socket, form: to_form(changeset, as: "video"))}
+        {:noreply, assign(socket, form: to_form(changeset))}
     end
   end
 

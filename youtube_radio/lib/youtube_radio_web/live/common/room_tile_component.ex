@@ -9,22 +9,26 @@ defmodule YoutubeRadioWeb.Common.RoomTileComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="view">
-      <h1><%= @room.name %></h1>
+    <div class="room-tile">
+      <div>
+        <h1><%= @room.name %></h1>
 
-      <.error :if={@check_errors}>
-        The room is not empty
-      </.error>
+        <.error :if={@check_errors}>
+          The room is not empty
+        </.error>
+      </div>
 
-      <.link href={~p"/rooms/#{@room.id}"}>
-        Enter
-      </.link>
+      <div class="controls">
+        <.link class="custom_button primary" href={~p"/rooms/#{@room.id}"}>
+          Enter
+        </.link>
 
-      <%= if @current_user.id == @room.user_id do %>
-        <button class="destroy" phx-click="delete" phx-value-id={@room.id} phx-target={@myself}>
-          Delete
-        </button>
-      <% end %>
+        <%= if @current_user.id == @room.user_id do %>
+          <button class="custom_button destrictive" phx-click="delete" phx-value-id={@room.id} phx-target={@myself}>
+            Delete
+          </button>
+        <% end %>
+      </div>
     </div>
     """
   end

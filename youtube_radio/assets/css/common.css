@@ -1,0 +1,16 @@
+.custom_button {
+	padding: 5px 20px;
+	font-size: 18px;
+	color: white;
+}
+
+.primary {
+	background-color: #15478d;
+}
+.secondary {
+	background-color: #069723;
+}
+
+.destrictive {
+	background-color: #d43c3c;
+}
