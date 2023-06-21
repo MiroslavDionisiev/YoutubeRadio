@@ -4,9 +4,6 @@ defmodule YoutubeRadioWeb.YoutubeRoom.YoutubeRoomLive do
   alias YoutubeRadio.YoutubeRadioRooms
   alias Phoenix.PubSub
 
-  import YoutubeRadioWeb.CoreComponents
-
-
   @impl true
   def mount(%{"id" => room_id} = _params, _session, socket) do
     room = YoutubeRooms.get_room_by_id(String.to_integer(room_id))
@@ -23,6 +20,7 @@ defmodule YoutubeRadioWeb.YoutubeRoom.YoutubeRoomLive do
        form: to_form(%{}),
        room: room,
        video: nil,
+       videos: YoutubeRooms.get_all_room_videos(room.id),
        current_timestamp: 0
      ), temporary_assigns: [form: nil]}
   end
@@ -33,17 +31,8 @@ defmodule YoutubeRadioWeb.YoutubeRoom.YoutubeRoomLive do
   end
 
   @impl true
-  def handle_event("save", video, socket) do
-    current_user_id = socket.assigns.current_user.id
-    room_id = socket.assigns.room.id
-
-    case YoutubeRooms.add_video_to_room(video["youtube_link"], room_id, current_user_id) do
-      {:ok, _} -> {:noreply,  assign(socket, form: to_form(%{}))}
-
-      {:error, changeset} ->
-        IO.inspect(changeset)
-        {:noreply, assign(socket, form: to_form(changeset))}
-    end
+  def handle_info(%{event: "update", payload: new_video}, socket) do
+    {:noreply, assign(socket, videos: [new_video | socket.assigns.videos])}
   end
 
   @impl true

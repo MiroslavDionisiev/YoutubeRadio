@@ -1,0 +1,22 @@
+.room-video-list {
+	display: flex;
+	flex-direction: column;
+	border: 2px solid black;
+	align-self: flex-end;
+	height: 100%;
+	width: 30%;
+	padding: 5px;;
+}
+
+.video-list {
+	display: flex;
+	flex-direction: column-reverse;
+	margin: 10px;
+	height: 90%;
+	overflow: scroll;
+}
+
+.current-video {
+	background-color: magenta;
+	color: yellow;
+}

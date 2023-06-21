@@ -1,23 +1,21 @@
 <section class="youtube-room">
   <h1><%= @room.name %></h1>
-  <.form
-    for={@form}
-    phx-submit="save"
-    method="post"
-  >
-    <.input type="text" field={@form[:youtube_link]} />
+  <section class="room-body">
+    <.live_component
+      module={YoutubeRadioWeb.Common.YoutubeVideoComponent}
+      id={"#video_{@room.id}"}
+      video={@video}
+      current_timestamp={@current_timestamp}
+    />
 
-    <%= for key <- Keyword.keys(@form.errors) do %>
-      <.error> <%= @form.errors[key] |> elem(0) %> </.error>
-    <% end %>
-
-    <button class="custom_button secondary">Save</button>
-  </.form>
-
-  <.live_component
-    module={YoutubeRadioWeb.Common.YoutubeVideoComponent}
-    id={"#{@room.id}_video"}
-    video={@video}
-    current_timestamp={@current_timestamp}
-  />
+    <.live_component
+      module={YoutubeRadioWeb.Common.RoomVideoListComponent}
+      id={"video_list_#{@room.id}"}
+      current_video={@video}
+      videos={@videos}
+      room={@room}
+      form={to_form(%{})}
+      current_user={@current_user}
+    />
+  </section>
 </section>

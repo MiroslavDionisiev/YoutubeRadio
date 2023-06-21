@@ -33,8 +33,9 @@ defmodule YoutubeRadio.YoutubeRooms do
 
   def get_all_room_videos(room_id) when is_integer(room_id) do
     Repo.all(
-      from(video in Video, where: video.room_id == ^room_id, order_by: [asc: video.inserted_at])
+      from(video in Video, where: video.room_id == ^room_id, order_by: [desc: video.inserted_at])
     )
+    |> Repo.preload(:user)
   end
 
   def get_next_to_play_video(room_id) when is_integer(room_id) do
