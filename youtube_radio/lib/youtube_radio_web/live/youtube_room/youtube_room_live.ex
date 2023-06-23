@@ -8,6 +8,10 @@ defmodule YoutubeRadioWeb.YoutubeRoom.YoutubeRoomLive do
   def mount(%{"id" => room_id} = _params, _session, socket) do
     room = YoutubeRooms.get_room_by_id(String.to_integer(room_id))
 
+    if room == nil do
+      raise YoutubeRadioWeb.YoutubeRoomLive.InvalidRoomIdError
+    end
+
     if connected?(socket) do
       current_user_id = socket.assigns.current_user.id
       PubSub.subscribe(YoutubeRadio.PubSub, "#{room.name}_#{current_user_id}")
@@ -50,4 +54,8 @@ defmodule YoutubeRadioWeb.YoutubeRoom.YoutubeRoomLive do
       ) do
     {:noreply, assign(socket, video: video, current_timestamp: current_timestamp)}
   end
+end
+
+defmodule YoutubeRadioWeb.YoutubeRoomLive.InvalidRoomIdError do
+  defexception message: "Invalid room id", plug_status: 404
 end
